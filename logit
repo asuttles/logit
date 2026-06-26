@@ -1,0 +1,176 @@
+#!/usr/bin/env perl
+
+# Local Variables:
+# comment-column: 40
+# End:
+
+use strict;
+use warnings;
+
+use Time::Piece;
+use Getopt::Long;
+use Text::CSV;
+
+our $LOGFILE = "$ENV{HOME}/.log/logfile.csv";
+
+# Create a CSV Parser Object
+my $csv = Text::CSV->new({auto_diag => 1,
+			  allow_whitespace => 1});
+
+# Timeframe for reports (default 30 days)
+our $DAYSAGO = 30; 
+our $ONEDAY  = 24 * 60 * 60;
+our $SUMMARY = 0;
+
+# Validate Data is ISO format (YYYY-MM-DD)
+sub validate_date {
+    my ($date) = @_;
+
+    my $exception = eval {
+        Time::Piece->strptime($date, '%Y-%m-%d');
+    };
+
+    return !defined($exception);
+}
+
+
+# Add an entry to the log
+sub add_entry {
+
+    # Verify Args
+    die "Four arguments needed to add a record:\n" .
+	"  -> date activity quantity units.\n" .
+	"e.g. > add 20260704 read 30 pages\n"
+	unless @_ == 4;
+
+    my ($date, $activity, $quantity, $units) = @_;
+
+    # Setup Date
+    if ($date eq 'today') {
+	$date = localtime->ymd;
+    }
+    else {
+	die "Invalid date format: $date\n" .
+	    "Should be: YYYY-MM-DD\n\n"
+	    unless validate_date($date);
+    }
+
+    # Print to Logfile
+    open my $fh, '>>', $LOGFILE
+	or die "Cannot open output file $LOGFILE.\n$!";
+
+    print $fh "$date,$activity,$quantity,$units\n";
+
+    close $fh;
+}
+
+
+# Generate a list of all logged categories
+sub print_categories {
+
+    my %activities;
+    
+    open my $fh, '<', $LOGFILE
+	or die "Cannot open logfile: $LOGFILE.\n$!";
+
+    while (my $row = $csv->getline($fh)) {
+
+	my ($date, $activity, $value, $note) = @$row;
+
+	$activities{$activity} += 1;
+    }
+
+    for (keys %activities) {
+
+	printf "%-15s (%d entries)\n", $_, $activities{$_};
+    }
+}
+
+
+# Print a Report for a Single Activity
+sub report_category {
+
+    # Category and Date Filters
+    my ($category) = @_;
+    my $cutoff = localtime() - ($ONEDAY * $DAYSAGO);
+
+    # Summary Variables
+    my ($count, $total);
+
+    open my $fh, '<', $LOGFILE
+	or die "Cannot open logfile: $LOGFILE.\n$!";
+
+    printf "\n%s report for last %i days:\n", $category, $DAYSAGO;
+
+    # Print Rows Meeting Date/Category Filter
+    while (my $row = $csv->getline($fh)) {
+
+	my ($date_str, $activity, $field1, $field2) = @$row;
+
+	next unless $activity eq $category;
+
+	next unless defined $date_str;
+	my $date = Time::Piece->strptime($date_str, "%Y-%m-%d");
+	next unless $date >= $cutoff;
+
+	printf "  %10s: %5s %s\n", $date_str, $field1, $field2;
+	$total += $field1; $count++;
+    }
+
+    # Print Summary Information
+    if ($SUMMARY) {
+	print "-----------------------------\n";
+	printf "  Total: %i items\n  Sum: %i\n\n",
+	    $count, $total;
+    }
+
+    close $fh;
+}
+
+
+# Handle Report Requests
+sub report {
+
+    return print_categories()
+        unless @_;
+
+    report_category(@_);
+}
+
+
+# Print a friendly help message
+sub help {
+
+    print "You need serious help!\n";
+}
+
+
+# Main Program
+sub main {
+
+    # Handle Switches
+    GetOptions(
+	'last|l=i'  => \$DAYSAGO,
+	'summary|s' => \$SUMMARY,
+	);
+
+    # Handle Commands
+    my $command = shift @ARGV
+	or die "Usage: logit [add|report|help]\n";
+
+    if ($command eq 'add') {	        # Add to the log
+	add_entry(@ARGV);
+    }
+    elsif ($command eq 'report') {      # Generate report 
+	report(@ARGV);
+    }
+    elsif ($command eq 'help') {        # Print help 
+	help(@ARGV);
+    }
+    else {
+	die "unknown command: $command\n" .
+	    "Usage: logit [add|report|help]\n";
+    }
+}
+
+main();
