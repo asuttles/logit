@@ -1,4 +1,4 @@
-# MLB Matchups
+# LOGIT
 
 A simple command-line utility written in Perl that logs simple daily activities and metrics.
 
@@ -50,7 +50,7 @@ Add a daily weigh-in to the log:
 ./logit add weight 175 pounds
 ```
 
-Print a report of all guitar sessions:
+Print a report of all banjo sessions:
 ```sh
 ./logit report banjo
 ```
