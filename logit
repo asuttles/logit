@@ -138,6 +138,54 @@ sub report {
 }
 
 
+# Print an Intersection Report
+sub intersect {
+
+    my (@activities) = @_;
+
+    die "Not enough categories for an intersection.\n"
+	unless @activities >= 2;
+
+    open my $fh, '<', $LOGFILE
+	or die "Cannot open logfile: $LOGFILE.\n$!";
+
+    # Build lookup tables for wanted categories and matches
+    my %wanted = map {$_ => 1} @activities;
+    my %days;
+    
+    # Find category matches and save them in a hash
+    while (my $row = $csv->getline($fh)) {
+
+	my ($date, $activity, $field1, $field2) = @$row;
+
+	next unless exists $wanted{$activity};
+	
+	$days{$date}{$activity} = $field1;
+    }
+
+    close $fh;
+
+    # Print the intersections
+    for my $day (sort keys %days) {
+
+	my $match = 1;
+
+	for my $activity (@activities) {
+	    $match &&= exists $days{$day}{$activity};
+	}
+
+	next unless $match;
+
+	printf "%-12s", $day;
+
+	for my $activity (@activities) {
+	    printf "%-5s", $days{$day}{$activity};
+	}
+
+	print "\n";
+    }
+}
+
 # Print a friendly help message
 sub help {
 
@@ -150,8 +198,8 @@ sub main {
 
     # Handle Switches
     GetOptions(
-	'last|l=i'  => \$DAYSAGO,
-	'summary|s' => \$SUMMARY,
+	'last|l=i'    => \$DAYSAGO,
+	'summary|s'   => \$SUMMARY,
 	);
 
     # Handle Commands
@@ -163,6 +211,9 @@ sub main {
     }
     elsif ($command eq 'report') {      # Generate report 
 	report(@ARGV);
+    }
+    elsif ($command eq 'intersect') {   # Print intersection
+	intersect(@ARGV);
     }
     elsif ($command eq 'help') {        # Print help 
 	help(@ARGV);

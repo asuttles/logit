@@ -13,14 +13,14 @@ A simple command-line utility written in Perl that logs simple daily activities 
 * Getopt::Long;
 * Text::CSV;
 
-### FreeBSD
+### Packages
 
-Install required packages:
+To install required packages on FreeBSD:
 
 ```sh
-pkg install p5-Time-Piece
-pkg install p5-Getopt-Long
-pkg install p5-Text-CSV
+sudo pkg install p5-Time-Piece
+sudo pkg install p5-Getopt-Long
+sudo pkg install p5-Text-CSV
 ```
 
 ## Installation
@@ -38,37 +38,48 @@ Make the script executable:
 chmod +x logit
 ```
 
+Install it on the local system:
+```sh
+sudo install -m 755 ./logit /usr/local/bin/logit
+```
+
 ## Usage
 
 Add a daily run to the log:
 ```sh
-./logit add run 30 minutes
+logit add run 30 minutes
 ```
 
 Add a daily weigh-in to the log:
 ```sh
-./logit add weight 175 pounds
+logit add weight 175 pounds
 ```
 
 Print a report of all banjo sessions:
 ```sh
-./logit report banjo
+logit report banjo
 ```
 
 Print a report of systolic blood pressure readings over the past 20 days:
 ```sh
-./logit report systolic --last 20
+logit report systolic --last 20
 ```
 
 Print a report of pushups with a summary:
 ```sh
-./logit report pushups --summary
+logit report pushups --summary
 ```
+
+Print the intersection of multiple categories:
+```sh
+logit intersect run pushups
+```
+
 
 Display help:
 
 ```sh
-./logit help
+logit help
 ```
 
 ## License
