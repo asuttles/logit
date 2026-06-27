@@ -4,14 +4,14 @@ A simple command-line utility written in Perl that logs simple daily activities 
 
 ## Features
 
-* Quickly add items to a csv log
-* Generate simple reports for a time-limited period
+* Quickly add items to a csv log from the terminal
+* Generate simple terminal reports for a specified time period
 
 ## Requirements
 
-* Time::Piece;
-* Getopt::Long;
-* Text::CSV;
+* Time::Piece
+* Getopt::Long
+* Text::CSV
 
 ### Packages
 
@@ -45,14 +45,14 @@ sudo install -m 755 ./logit /usr/local/bin/logit
 
 ## Usage
 
-Add a daily run to the log:
+Add today's daily run to the log:
 ```sh
-logit add run 30 minutes
+logit add today run 30 minutes
 ```
 
-Add a daily weigh-in to the log:
+Add a weigh-in from a specific date to the log:
 ```sh
-logit add weight 175 pounds
+logit add 2015-07-04 weight 175 pounds
 ```
 
 Print a report of all banjo sessions:
@@ -60,7 +60,7 @@ Print a report of all banjo sessions:
 logit report banjo
 ```
 
-Print a report of systolic blood pressure readings over the past 20 days:
+Print a report of systolic BP readings over the last 20 days:
 ```sh
 logit report systolic --last 20
 ```
@@ -70,7 +70,7 @@ Print a report of pushups with a summary:
 logit report pushups --summary
 ```
 
-Print the intersection of multiple categories:
+Print the date intersection of 2+ categories:
 ```sh
 logit intersect run pushups
 ```
