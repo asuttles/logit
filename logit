@@ -11,6 +11,8 @@ use Time::Piece;
 use Getopt::Long;
 use Text::CSV;
 
+use Data::Dumper;
+
 our $LOGFILE = "$ENV{HOME}/.log/logfile.csv";
 
 # Create a CSV Parser Object
@@ -26,11 +28,13 @@ our $SUMMARY = 0;
 sub validate_date {
     my ($date) = @_;
 
-    my $exception = eval {
+    # Check for an Exception
+    eval {
         Time::Piece->strptime($date, '%Y-%m-%d');
     };
 
-    return !defined($exception);
+    # Return Negation of Exception Code
+    return !$@;
 }
 
 
@@ -48,6 +52,10 @@ sub add_entry {
     # Setup Date
     if ($date eq 'today') {
 	$date = localtime->ymd;
+    }
+    elsif ($date eq 'yesterday') {
+	my $yesterday = localtime() - $ONEDAY;
+	$date = $yesterday->ymd;
     }
     else {
 	die "Invalid date format: $date\n" .
