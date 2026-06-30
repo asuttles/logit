@@ -194,6 +194,65 @@ sub intersect {
     }
 }
 
+# Find the maximum quantity for an activity
+sub maximum {
+
+    my ($category) = @_;
+    
+    my $max = '-inf';
+    my $max_date = "";
+
+    open my $fh, '<', $LOGFILE
+	or die "Cannot open logfile: $LOGFILE.\n$!";
+
+    # Search for Maximum Value
+    while (my $row = $csv->getline($fh)) {
+
+	my ($date, $activity, $field1, $field2) = @$row;
+
+	next unless $activity eq $category;
+	
+	if ($field1 > $max) {
+	    $max = $field1;
+	    $max_date = $date;
+	}
+    }
+
+    close $fh;
+
+    printf "max %s: %.1f on %s\n", $category, $max, $max_date;
+}
+
+# Find the minimum quantity for an activity
+sub minimum {
+
+    my ($category) = @_;
+    
+    my $min = 'inf';
+    my $min_date = "";
+
+    open my $fh, '<', $LOGFILE
+	or die "Cannot open logfile: $LOGFILE.\n$!";
+
+    # Search for Minimum Value
+    while (my $row = $csv->getline($fh)) {
+
+	my ($date, $activity, $field1, $field2) = @$row;
+
+	next unless $activity eq $category;
+	
+	if ($field1 < $min) {
+	    $min = $field1;
+	    $min_date = $date;
+	}
+    }
+
+    close $fh;
+
+    printf "Min %s: %.1f on %s\n", $category, $min, $min_date;
+}
+
+
 # Print a friendly help message
 sub help {
 
@@ -223,6 +282,12 @@ sub main {
     elsif ($command eq 'intersect') {   # Print intersection
 	intersect(@ARGV);
     }
+    elsif ($command eq 'max') {	        # Maximum Event
+	maximum(@ARGV);
+    }
+    elsif ($command eq 'min') {	        # Minimum Event 
+	minimum(@ARGV);
+    }				 
     elsif ($command eq 'help') {        # Print help 
 	help(@ARGV);
     }
