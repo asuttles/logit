@@ -8,6 +8,7 @@ use strict;
 use warnings;
 
 use Time::Piece;
+use Time::Seconds;
 use Getopt::Long;
 use Text::CSV;
 
@@ -23,6 +24,88 @@ my $csv = Text::CSV->new({auto_diag => 1,
 our $DAYSAGO = 30; 
 our $ONEDAY  = 24 * 60 * 60;
 our $SUMMARY = 0;
+
+
+# Read All Log Entries into Array and Return Ref
+sub read_entries {
+
+    my @entries;
+
+    open my $fh, '<', $LOGFILE
+	or die "Cannot open output file $LOGFILE.\n$!";
+
+    while (my $row = $csv->getline($fh)) {
+
+	my ($date, $activity, $value, $note) = @$row;
+
+	push @entries, {
+	    date     => $date,
+	    activity => $activity,
+	    value    => $value,
+	    note     => $note,
+	};
+    }
+
+    close $fh;
+
+    return \@entries;
+}
+
+
+# Return Reference to Array of Dates
+# a particular activity occured
+sub get_activity_dates {
+
+    my ($category) = @_;    
+
+    my %dates;
+    my $entries = read_entries();
+
+    # Capture all dates matching category
+    for my $entry (@$entries) {
+	next unless $entry->{activity} eq $category;
+	$dates{$entry->{date}} = 1;
+    }
+
+    my @days = sort keys %dates;
+
+    return \@days;
+}
+
+
+# Print streak statistics
+sub streak {
+
+    my ($category) = @_;
+
+    my $streak  = 0;
+    my $longest = 0;
+    
+    my $dates = get_activity_dates($category);
+    my $prev  = Time::Piece->strptime($dates->[0], '%Y-%m-%d');
+    
+    for my $date (@$dates) {
+	
+	my $cur = Time::Piece->strptime($date, '%Y-%m-%d');
+	my $del = ($cur-$prev)->days;
+
+	next if ($del == 0);
+	
+	if ($del == 1) {
+	    $streak++;
+	    $longest = $streak if ($streak > $longest);
+	}
+	else {
+	    $streak = 1;
+	    $longest = 1 if ($longest == 0);
+	}
+
+	$prev = $cur;
+    }
+
+    printf "The longest %s streak is: %i\n", $category, $longest;
+}
+
 
 # Validate Data is ISO format (YYYY-MM-DD)
 sub validate_date {
@@ -217,7 +300,6 @@ sub maximum {
 	    $max_date = $date;
 	}
     }
-
     close $fh;
 
     printf "max %s: %.1f on %s\n", $category, $max, $max_date;
@@ -246,7 +328,6 @@ sub minimum {
 	    $min_date = $date;
 	}
     }
-
     close $fh;
 
     printf "Min %s: %.1f on %s\n", $category, $min, $min_date;
@@ -271,7 +352,7 @@ sub main {
 
     # Handle Commands
     my $command = shift @ARGV
-	or die "Usage: logit [add|report|help]\n";
+	or die "Usage: logit [add|report|intersect|max|min|help]\n";
 
     if ($command eq 'add') {	        # Add to the log
 	add_entry(@ARGV);
@@ -281,6 +362,9 @@ sub main {
     }
     elsif ($command eq 'intersect') {   # Print intersection
 	intersect(@ARGV);
+    }
+    elsif ($command eq 'streak') {      # Print Streaks 
+	streak(@ARGV);
     }
     elsif ($command eq 'max') {	        # Maximum Event
 	maximum(@ARGV);
@@ -293,7 +377,7 @@ sub main {
     }
     else {
 	die "unknown command: $command\n" .
-	    "Usage: logit [add|report|help]\n";
+	    "Usage: logit [add|report|intersect|max|min|help]\n";
     }
 }
 
