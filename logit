@@ -7,10 +7,10 @@
 use strict;
 use warnings;
 
-use Time::Piece;
-use Time::Seconds;
 use Getopt::Long;
 use Text::CSV;
+use Time::Piece;
+use Time::Seconds;
 
 use Data::Dumper;
 
@@ -20,9 +20,8 @@ our $LOGFILE = "$ENV{HOME}/.log/logfile.csv";
 my $csv = Text::CSV->new({auto_diag => 1,
 			  allow_whitespace => 1});
 
-# Timeframe for reports (default 30 days)
+# Globals for Commandline Switches
 our $DAYSAGO = 30; 
-our $ONEDAY  = 24 * 60 * 60;
 our $SUMMARY = 0;
 
 
@@ -39,7 +38,8 @@ sub validate_date {
     return !$@;
 }
 
-# Read All Log Entries into Array and Return Ref
+
+# Read All Log Entries and return Array Ref
 sub read_entries {
 
     my @entries;
@@ -74,28 +74,31 @@ sub get_activity_dates {
     my %dates;
     my $entries = read_entries();
 
-    # Capture all dates matching category
+    # Capture all dates matching $category
     for my $entry (@$entries) {
 	next unless $entry->{activity} eq $category;
 	$dates{$entry->{date}} = 1;
     }
 
+    # Remove Dates from Hash and Return Ref
     my @days = sort keys %dates;
 
     return \@days;
 }
 
 
-# Print streak statistics
+# Print Longest Streak for Category
 sub long_streak {
 
     my ($dates) = @_;
 
-    return 1 if (scalar(@$dates) == 1);
+    return 1 if (@$dates == 1);	        # Single Entry
     
     my $streak  = 0;
     my $longest = 0;
-    
+
+    # Iterate through Dates List, Comparing Current and
+    # Previous Dates to find Streaks
     my $prev  = Time::Piece->strptime($dates->[0], '%Y-%m-%d');
     
     for my $date (@$dates) {
@@ -121,16 +124,19 @@ sub long_streak {
 }
 
 
+# Print Current Streak for Category
 sub curr_streak {
 
+    # Sort Dates in Reverse Order
     my ($dates_ref) = @_;
     my @dates = reverse @$dates_ref;
 
     my $streak = 0;
 
+    # Iterate Through Dates Until a Day is Missed...
     my $prev  = Time::Piece->strptime($dates[0], '%Y-%m-%d');
 
-    return $streak
+    return $streak			# Streak Broken
 	unless ((localtime() - $prev)->days < 2);
 
     for my $date (@dates) {	
@@ -147,7 +153,7 @@ sub curr_streak {
     return $streak;
 }
 
-
+# Print Longest and Current Streak Stats
 sub streak {
 
     my ($category) = @_;
@@ -165,7 +171,7 @@ sub streak {
 sub add_entry {
 
     # Verify Args
-    die "Four arguments needed to add a record:\n" .
+    die "Four arguments are needed to add a record:\n" .
 	"  -> date activity quantity units.\n" .
 	"e.g. > add 20260704 read 30 pages\n"
 	unless @_ == 4;
@@ -177,7 +183,7 @@ sub add_entry {
 	$date = localtime->ymd;
     }
     elsif ($date eq 'yesterday') {
-	my $yesterday = localtime() - $ONEDAY;
+	my $yesterday = localtime() - ONE_DAY;
 	$date = $yesterday->ymd;
     }
     else {
@@ -223,7 +229,7 @@ sub report_category {
 
     # Category and Date Filters
     my ($category) = @_;
-    my $cutoff = localtime() - ($ONEDAY * $DAYSAGO);
+    my $cutoff = localtime() - (ONE_DAY * $DAYSAGO);
 
     # Summary Variables
     my ($count, $total);
@@ -269,6 +275,30 @@ sub report {
 }
 
 
+# Print 'Recent' Log Entires
+sub recent {
+
+    my $today = localtime();
+    
+    # Retrieve entries and sort them
+    my $entries = read_entries();
+    my @sorted =
+	sort { $a->{date} cmp $b->{date} } @$entries;
+
+    # Print Log Items from last 3 days...
+    for my $entry (reverse @sorted) {
+
+	my $date = Time::Piece->strptime(
+	    $entry->{date}, "%Y-%m-%d");
+
+	last if (($today - $date)->days > 3);
+
+	printf "  %10s: %10s %5.1f %s\n", $entry->{date},
+	    $entry->{activity}, $entry->{value}, $entry->{note};
+    }
+}
+
+
 # Print an Intersection Report
 sub intersect {
 
@@ -301,11 +331,13 @@ sub intersect {
 
 	my $match = 1;
 
+	# Set $match flag if $activity is defined
+	# for the given $day
 	for my $activity (@activities) {
 	    $match &&= exists $days{$day}{$activity};
 	}
 
-	next unless $match;
+	next unless $match;		# Check all cats matches
 
 	printf "%-12s", $day;
 
@@ -317,7 +349,7 @@ sub intersect {
     }
 }
 
-# Find the maximum quantity for an activity
+# Find the maximum 'quantity' for an activity
 sub maximum {
 
     my ($category) = @_;
@@ -345,7 +377,7 @@ sub maximum {
     printf "max %s: %.1f on %s\n", $category, $max, $max_date;
 }
 
-# Find the minimum quantity for an activity
+# Find the minimum 'quantity' for an activity
 sub minimum {
 
     my ($category) = @_;
@@ -399,6 +431,9 @@ sub main {
     }
     elsif ($command eq 'report') {      # Generate report 
 	report(@ARGV);
+    }
+    elsif ($command eq 'recent') {	# Print recent entries
+	recent(@ARGV);
     }
     elsif ($command eq 'intersect') {   # Print intersection
 	intersect(@ARGV);
