@@ -26,6 +26,19 @@ our $ONEDAY  = 24 * 60 * 60;
 our $SUMMARY = 0;
 
 
+# Validate Data is ISO format (YYYY-MM-DD)
+sub validate_date {
+    my ($date) = @_;
+
+    # Check for an Exception
+    eval {
+        Time::Piece->strptime($date, '%Y-%m-%d');
+    };
+
+    # Return Negation of Exception Code
+    return !$@;
+}
+
 # Read All Log Entries into Array and Return Ref
 sub read_entries {
 
@@ -52,8 +65,8 @@ sub read_entries {
 }
 
 
-# Return Reference to Array of Dates
-# a particular activity occured
+# Return Reference to a sorted Array of Dates
+#    for a particular activity
 sub get_activity_dates {
 
     my ($category) = @_;    
@@ -74,14 +87,15 @@ sub get_activity_dates {
 
 
 # Print streak statistics
-sub streak {
+sub long_streak {
 
-    my ($category) = @_;
+    my ($dates) = @_;
 
+    return 1 if (scalar(@$dates) == 1);
+    
     my $streak  = 0;
     my $longest = 0;
     
-    my $dates = get_activity_dates($category);
     my $prev  = Time::Piece->strptime($dates->[0], '%Y-%m-%d');
     
     for my $date (@$dates) {
@@ -103,21 +117,47 @@ sub streak {
 	$prev = $cur;
     }
 
-    printf "The longest %s streak is: %i\n", $category, $longest;
+    return $longest;
 }
 
 
-# Validate Data is ISO format (YYYY-MM-DD)
-sub validate_date {
-    my ($date) = @_;
+sub curr_streak {
 
-    # Check for an Exception
-    eval {
-        Time::Piece->strptime($date, '%Y-%m-%d');
-    };
+    my ($dates_ref) = @_;
+    my @dates = reverse @$dates_ref;
 
-    # Return Negation of Exception Code
-    return !$@;
+    my $streak = 0;
+
+    my $prev  = Time::Piece->strptime($dates[0], '%Y-%m-%d');
+
+    return $streak
+	unless ((localtime() - $prev)->days < 2);
+
+    for my $date (@dates) {	
+
+	my $cur = Time::Piece->strptime($date, '%Y-%m-%d');
+	my $del = ($prev-$cur)->days;
+
+	return $streak if ($del > 1);
+
+	$streak++;
+	$prev = $cur;
+    }
+
+    return $streak;
+}
+
+
+sub streak {
+
+    my ($category) = @_;
+    my $dates = get_activity_dates($category);
+
+    printf "The longest %s streak is: %i\n",
+	$category, long_streak($dates);
+
+    printf "The current %s streak is: %i\n",
+	$category, curr_streak($dates);
 }
 
 
