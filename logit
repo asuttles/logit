@@ -136,7 +136,7 @@ sub curr_streak {
     # Iterate Through Dates Until a Day is Missed...
     my $prev  = Time::Piece->strptime($dates[0], '%Y-%m-%d');
 
-    return $streak			# Streak Broken
+    return $streak			# No current streak
 	unless ((localtime() - $prev)->days < 2);
 
     for my $date (@dates) {	
@@ -164,6 +164,9 @@ sub streak {
 
     printf "The current %s streak is: %i\n",
 	$category, curr_streak($dates);
+
+    printf "Last logged %s: %s\n",
+	$category, $dates->[-1];
 }
 
 
@@ -326,6 +329,8 @@ sub intersect {
 
     close $fh;
 
+    my $count = 0;
+    
     # Print the intersections
     for my $day (sort keys %days) {
 
@@ -337,16 +342,20 @@ sub intersect {
 	    $match &&= exists $days{$day}{$activity};
 	}
 
-	next unless $match;		# Check all cats matches
+	next unless $match;		# Verify all categories
 
+	$count++;
+	
 	printf "%-12s", $day;
 
 	for my $activity (@activities) {
 	    printf "%-5s", $days{$day}{$activity};
 	}
-
-	print "\n";
+	print "\n";	
     }
+
+    print "There is no intersection for these categories.\n"
+	unless $count;
 }
 
 # Find the maximum 'quantity' for an activity
