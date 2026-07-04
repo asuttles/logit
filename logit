@@ -1,8 +1,5 @@
 #!/usr/bin/env perl
-
-# Local Variables:
-# comment-column: 40
-# End:
+# -*- comment-column: 40; -*-
 
 use strict;
 use warnings;
@@ -106,8 +103,6 @@ sub long_streak {
 	my $cur = Time::Piece->strptime($date, '%Y-%m-%d');
 	my $del = ($cur-$prev)->days;
 
-	next if ($del == 0);
-	
 	if ($del == 1) {
 	    $streak++;
 	    $longest = $streak if ($streak > $longest);
@@ -415,6 +410,27 @@ sub minimum {
 }
 
 
+# Remove the last item added to the log
+sub undo {
+
+    my @lines;
+
+    open my $in, '<', $LOGFILE
+	or die "Cannot open logfile: $LOGFILE.\n$!";
+
+    @lines = <$in>;
+    close $in;
+
+    my $deleted = pop @lines;
+    printf "Removed: %s", $deleted;
+
+    open my $out, '>', $LOGFILE
+	or die "Cannot open logfile: $LOGFILE.\n$!";
+
+    print $out @lines;
+    close $out;
+}
+
 # Print a friendly help message
 sub help {
 
@@ -458,6 +474,9 @@ sub main {
     }				 
     elsif ($command eq 'help') {        # Print help 
 	help(@ARGV);
+    }
+    elsif ($command eq 'undo') {        # Undo last add 
+	undo(@ARGV);
     }
     else {
 	die "unknown command: $command\n" .
