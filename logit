@@ -38,13 +38,35 @@ sub validate_date {
     return !$@;
 }
 
+# Prune Backups
+sub prune_backups {
+
+    my @backups = sort glob("$BACKUP.*");
+
+    while (@backups > 5) {
+
+	my $oldest = shift @backups;
+
+	unlink $oldest
+	    or warn "Cannot delete $oldest: $!";
+
+	print "Removed old log file: $oldest\n";
+    }	
+}
 
 # Make a backup of the log file
 sub backup_log {
 
+    my $date = localtime->ymd;
+
+    # Make primary backup
     copy($LOGFILE, $BACKUP)
 	or die "Unable to create backup file: $!";
 
+    # Make dated backup
+    copy($BACKUP, "$BACKUP.$date")
+	or die "Unable to make dated backup file: $!";
+    
     print "Log file backed up: $BACKUP\n\n";    
 }
 
@@ -459,10 +481,11 @@ sub main {
 	'summary|s'   => \$SUMMARY,
 	);
 
-    # Check Need for Backups
+    # Check Need to Refresh Backup
     if (!-e $BACKUP || -M $BACKUP > 7) {
 	backup_log();
     }
+    prune_backups();
     
     # Handle Commands
     my $command = shift @ARGV
@@ -481,7 +504,7 @@ sub main {
 	intersect(@ARGV);
     }
     elsif ($command eq 'backup') {	# Backup the Log
-	backup_log();
+	backup_log(@ARGV);
     }
     elsif ($command eq 'streak') {      # Print Streaks 
 	streak(@ARGV);
