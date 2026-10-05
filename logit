@@ -64,8 +64,11 @@ sub backup_log {
 	or die "Unable to create backup file: $!";
 
     # Make dated backup
-    copy($BACKUP, "$BACKUP.$date")
-	or die "Unable to make dated backup file: $!";
+    my $dated_backup = "$BACKUP.$date";
+    unless (-e $dated_backup) {
+	copy($BACKUP, $dated_backup)
+	    or die "Unable to make dated backup file: $!"
+    }
     
     print "Log file backed up: $BACKUP\n\n";    
 }
@@ -482,7 +485,8 @@ sub main {
 	);
 
     # Check Need to Refresh Backup
-    if (!-e $BACKUP || -M $BACKUP > 7) {
+    if (-e $LOGFILE &&
+	(!-e $BACKUP || -M $BACKUP > 7)) {
 	backup_log();
     }
     prune_backups();
